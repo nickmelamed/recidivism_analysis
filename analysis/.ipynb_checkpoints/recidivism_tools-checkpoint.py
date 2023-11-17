@@ -7,18 +7,20 @@ import seaborn as sns
 import statsmodels.api as sm
 
 
-def create_dummy_range(lower, upper, prefix):
+def create_dummy_range(lower, upper, risk_df, result, prefix):
     '''Adds columns of indicator variables to an existing dataframe for the desired range. 
             
         Params:
             lower (int): The lower bound for the range
             upper (int): The upper bound for the range
+            risk_df (DataFrame): DataFrame containing all relevant information for risk rankings and other characteristics
+            result (DataFrame): DataFrame that will be constructed to have groupings 
             prefix (String): column name (e.g., Months Supervised) to be followed by specified grouping
   
     '''
     
     col_name = prefix + ": " + str(lower) + '-' + str(upper)
-    less_dummies[col_name] = risk[prefix].apply(lambda x: 1 if x in np.arange(lower, upper+1) else 0) # 1 if in age group, o.w. 0
+    result[col_name] = risk_df[prefix].apply(lambda x: 1 if x in np.arange(lower, upper+1) else 0) # 1 if in age group, o.w. 0
     
     
 
