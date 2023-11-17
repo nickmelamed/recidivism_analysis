@@ -24,21 +24,86 @@ def create_dummy_range(lower, upper, risk_df, result, prefix):
     
     
 
-def dummy_mlr(variable):
+def dummy_mlr(variable, risk_df):
     '''Creates a multiple linear regression object with Risk Ranking as the endogenous variable, and the desired variable as our exogenous variable, to determine the effect of the desired variable on Risk Ranking assignment.
     
     
     Params:
         variable (String): exogenous variable for the regression (e.g., Age)
+        risk_df (DataFrame): DataFrame with all data from risk rankings, including grouped dummies
     
     Returns:
         mlr (statsmodels.discrete.discrete_model.MultinomialResultsWrapper): MLR object that contains our coefficients
     
     '''
-    mlr = sm.MNLogit(endog = risk_less_dummies.loc[:, ['Risk Ranking']],
-                 exog = risk_less_dummies.loc[:, [col for col in risk_less_dummies if variable in col]]).fit() 
+    mlr = sm.MNLogit(endog = risk_df.loc[:, ['Risk Ranking']],
+                 exog = risk_df.loc[:, [col for col in risk_df if variable in col]]).fit() 
     # note we use a list comprehension to obtain all of the columns related to variable (e.g., for Age, we get all groupings)
     return mlr
+
+
+
+def chamberlain(risk_ranking, quantile, risk_df):
+    '''Calculates the Chamberlain estimate of a desired quantile of a distribution of survival durations, the 95% Confidence Interval of that quantile estimate, and the estimated variance of the quantiles - returns all of these in a single list for ease of calculation with future analysis
+    
+    Params:
+        risk_ranking (String): The Risk Ranking that we want to find the quantile for (Low, Moderate, or High)
+        quantile: Desired quantile we wish to calculate (can be any valid percentile value)
+        risk_df (Dataframe): DataFrame that contains the right censored data 
+        
+    Returns:
+        A list containing each of the following values:
+            estimate (float): The Chamberlain estimate of the quantile of the distribution of survival times for the given ranking 
+            ci (tuple): The 95% Confidence Interval of estimate 
+            var (float): The variance of estimate 
+        
+    
+    '''
+    
+    
+    X_l = risk_df.loc[risk_df['Risk Ranking'] == risk_ranking, 'Survival Time (Months)'].values
+    N_l = len(X_l)
+    l = 1.96 * np.sqrt(N_l * quantile * (1 - quantile))
+    j = int(np.floor(N_l * quantile - l))
+    k = int(np.ceil(N_l * quantile + l))
+    
+    order_stats = np.sort(X_l)
+    
+    X_j = order_stats[j-1] # we do j-1 because of Python's zero indexing 
+    X_k = order_stats[k-1]
+    
+    estimate = (X_j + order_stats[j]) / 2 
+    ci = (X_j, X_k) 
+    var = (N_l * (X_k - X_j)**2) / (4 * 1.96**2)
+    
+    return [estimate, ci, var]
+
+def mde(percentile, matrix):
+    '''Calculates the coefficients (the estimate of the survival time) of our risk rankings for a given percentile using the minimum distance estimation
+    
+    
+    Params:
+        percentile (float): Percentile for which we want to calculate the coefficient
+        matrix (DataFrame): DataFrame that contains all information needed for the MDE 
+        
+    Returns:
+        None
+        
+        '''
+        
+    df = matrix.loc[matrix['Percentile'] == percentile]
+    G = df[['Constant', 'Risk Ranking: High', 'Risk Ranking: Low', 'Risk Ranking: Moderate']].values
+    Omega = np.diag(df['$\hat{p}$'].values / df['Variance'].values)
+    pi_hat = df[['Estimate']].values
+    
+    theta_hat = np.linalg.inv(G.T@np.linalg.inv(Omega)@G)@(G.T@np.linalg.inv(Omega)@pi_hat)
+    
+    print(f'========= Quantile: {str(int(percentile*100)) + "th"} =========')
+    print(f'MDE Coefficient for Constant: {theta_hat[0]}')
+    print(f'MDE Coefficient for High Risk Ranking: {theta_hat[1]}')
+    print(f'MDE Coefficient for Low Risk Ranking: {theta_hat[2]}')
+    print(f'MDE Coefficient for Moderate Risk Ranking: {theta_hat[3]}')
+    print()
 
 
 
