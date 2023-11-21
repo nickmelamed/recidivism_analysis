@@ -120,7 +120,7 @@ def lifetable(df):
     '''
     
     df['D'] = df[['Survival Time (Months)']].notnull() # D is an indicator for observed duration
-    df['Z'] = sample[['Survival Time (Months)']].apply(np.ceil) # Z is the survival time in months
+    df['Z'] = df[['Survival Time (Months)']].apply(np.ceil) # Z is the survival time in months
     df['Z'].fillna(37, inplace = True) # right censoring at 37 months (observation ends at 36 months)
     df['Z'] = df['Z'].astype(int)
     
@@ -165,9 +165,10 @@ def ci_greenwood(lifetable):
             
     '''
 
-    greenwood = df['$S(y)$'] * ((df['Re-incarcerated'] / (df['At risk'] * (df['At risk'] - df['Re-incarcerated']))).cumsum())**0.5
-    upper_ci = df['$S(y)$'] + (1.96 * greenwood)
-    lower_ci = df['$S(y)$'] - (1.96 * greenwood)
+    greenwood = lifetable['$S(y)$'] * ((lifetable['Re-incarcerated'] / 
+                                        (lifetable['At risk'] * (lifetable['At risk'] - lifetable['Re-incarcerated']))).cumsum())**0.5
+    upper_ci = lifetable['$S(y)$'] + (1.96 * greenwood)
+    lower_ci = lifetable['$S(y)$'] - (1.96 * greenwood)
     return (lower_ci, upper_ci)
 
 
