@@ -18,3 +18,8 @@ I will be using recividism data from the State of Iowa's current prison cohort l
 
 ## Analysis
 
+`main.ipynb` : main narrative notebook that summarizes all the results. This includes all 3 topics covered in Motivation and Overview, as well as concluding remarks. 
+
+## License 
+
+This project is released under the terms of the MIT License.
